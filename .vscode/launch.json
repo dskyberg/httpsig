@@ -1,0 +1,70 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'http-sig-validator'",
+            "cargo": {
+                "args": [
+                    "run",
+                    "--bin=http-sig-validator",
+                    "--package=http-sig-validator",
+                    "--",
+                    "canonicalize",
+                    "-i",
+                    "test_data/basic_request.txt",
+                    "-a",
+                    "hmac-sha256",
+                    "-k",
+                    "hmac",
+                    "-d",
+                    "host date digest"
+                ]
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'http-sig-validator'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=http-sig-validator",
+                    "--package=http-sig-validator"
+                ],
+                "filter": {
+                    "name": "http-sig-validator",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'http-sig'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=http-sig"
+                ],
+                "filter": {
+                    "name": "http-sig",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

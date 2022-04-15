@@ -1,0 +1,14 @@
+[package]
+name = "httpsig-validator"
+version = "0.1.0"
+authors = ["Diggory Blake <diggsey@googlemail.com>"]
+edition = "2021"
+workspace = ".."
+
+[dependencies]
+httpsig = { path = "..", features = ["ring"] }
+structopt = "0.3"
+env_logger = "0.7.1"
+log = "0.4.8"
+anyhow = "1.0.28"
+thiserror = "1.0.30"

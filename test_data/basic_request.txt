@@ -1,0 +1,9 @@
+POST https://example.com/foo?param=value&pet=dog HTTP/1.1
+Host: example.com
+Date: Tue, 20 Apr 2021 02:07:55 GMT
+Content-Type: application/json
+Digest: sha-256=X48E9qOokqqrvdts8nOJRJN3OWDUoyWxBf7kbu9DBPE=
+Example-Dict: a=(1 2), b=3, c=4;aa=bb, d=(5 6);valid
+Content-Length: 18
+
+{"hello": "world"}
