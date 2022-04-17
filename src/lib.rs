@@ -20,10 +20,18 @@
 //!
 //! ### Supported signature algorithms:
 //!
-//! Signature Altorithms: `https://www.ietf.org/archive/id/draft-ietf-httpbis-message-signatures-09.html#name-signature-algorithm-methods`
-//! - `hmac-sha256`
+//! The following algorithms are listed in the [Algorithm registry](https://tools.ietf.org/id/draft-ietf-httpbis-message-signatures-09.html#name-http-signature-algorithms-4):
+//! * `hmac-sha256`
+//! * `rsa-pss-sha512`
+//! * `rsa-v1_5-sha256`
+//! * `ecdsa-p256-sha256`
+
 //!
 //! ### Supported digest algorithms:
+//! The following digest algorithmes are supported:
+//!
+//! * `SHA-256`
+//! * `SHA-512`
 //!
 //! ## Example usage (reqwest)
 //!
@@ -71,16 +79,16 @@ mod signature_component;
 pub use signature_component::*;
 
 mod signature_params;
-pub(crate) use signature_params::*;
+pub use signature_params::*;
 
 mod signature_input;
-pub(crate) use signature_input::*;
+pub use signature_input::*;
 
 mod derived;
 pub use derived::*;
 
 mod canonicalize;
-pub(crate) use canonicalize::*;
+pub use canonicalize::*;
 
 mod signing;
 pub use signing::*;

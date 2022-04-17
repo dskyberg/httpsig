@@ -363,12 +363,11 @@ mod tests {
     #[test]
     fn test_derive_query_params() {
         let url = "https://www.example.com//path?param=value&foo=bar&baz=batman";
-        let request_target = r#""@query-params";name="param": value"#;
         let dqp = DerivedComponent::new(AT_QUERY_PARAMS).with_param("name", "param");
         let result = request(url)
             .derive(&SignatureComponent::Derived(dqp))
             .unwrap();
-        assert_eq!(request_target, result);
+        assert_eq!(result, "value");
     }
 
     pub fn test_request(filename: &str) -> MockRequest {

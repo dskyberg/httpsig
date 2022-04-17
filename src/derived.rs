@@ -1,9 +1,10 @@
 //! Derived Components
 //!
-use sfv::{BareItem, Item, Parameters, Parser, SerializeValue};
 use std::cmp::PartialEq;
 use std::fmt;
 use std::str::FromStr;
+
+use sfv::{BareItem, Item, Parameters, Parser, SerializeValue};
 
 use crate::Error;
 

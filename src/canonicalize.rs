@@ -45,7 +45,7 @@ impl<T: RequestLike> RequestLike for &T {
 /// is automatically included in the Signature Base
 /// as well as the final `Signature-input` header that is placed on the request.
 #[derive(Debug, Default)]
-pub(crate) struct CanonicalizeConfig {
+pub struct CanonicalizeConfig {
     label: Option<String>,
     components: Vec<SignatureComponent>,
     params: SignatureParams,
@@ -80,13 +80,11 @@ impl CanonicalizeConfig {
         }
     }
 
-    /*
     /// Set the label in place
     pub fn set_label(&mut self, label: &str) -> &mut Self {
         self.label = Some(String::from(label));
         self
     }
-    */
 
     /// Set the components to include in the signature
     pub fn with_components(mut self, components: Vec<SignatureComponent>) -> Self {
@@ -94,13 +92,11 @@ impl CanonicalizeConfig {
         self
     }
 
-    /*
     /// Set the components to include in the signature
     pub fn set_components(&mut self, components: Vec<SignatureComponent>) -> &mut Self {
         self.components = components;
         self
     }
-    */
 
     /*
     /// Set the SignatureParams
@@ -178,7 +174,7 @@ impl From<&SignatureInput> for CanonicalizeConfig {
 }
 
 /// Extension method for computing the canonical "signature string" of a request.
-pub(crate) trait CanonicalizeExt {
+pub trait CanonicalizeExt {
     /// Compute the canonical representation of this request
     fn canonicalize(&self, config: &CanonicalizeConfig) -> Result<(Vec<u8>, SignatureInput)>;
 }
@@ -188,9 +184,9 @@ impl<T: RequestLike> CanonicalizeExt for T {
     ///
     /// The purpose of `canonicalize` is to fulfill steps 4 and 5 of section 3.1 Creating a Signature.
     /// There are 3 steps to this process:
-    /// 1. Construct the `@signature-params` as a serialized sfv::Item using the list components
+    /// 1. Construct the `@signature-params` as a serialized [sfv::Item] using the list components
     ///    and metadata parameters
-    /// 2. Construct the SignatureInput field as an sfv::Dictionary using
+    /// 2. Construct the SignatureInput field as an [sfv::Dictionary] using
     ///    the config label as the field key and the `@signature-params value as the field value.
     /// 3. Construct the Signature Base, including the `@signature-params`
     fn canonicalize(&self, config: &CanonicalizeConfig) -> Result<(Vec<u8>, SignatureInput)> {
@@ -248,6 +244,7 @@ mod tests {
         let sig_input =
             r#"sig=("host" "date" "digest");alg="rsa-v1_5-sha256";keyid="test-key-rsa""#;
         let config = CanonicalizeConfig::from_signature_input(sig_input).unwrap();
-        dbg!(&config);
+        let signature_input = config.to_signature_input();
+        assert_eq!(format!("{}", &signature_input), sig_input);
     }
 }

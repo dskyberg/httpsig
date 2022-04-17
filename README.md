@@ -28,21 +28,20 @@ features.
    these requests, the user must add the digest header manually before signing the request, or else the `Digest` header will
    not be included in the signature. Automatic digests for streaming requests *are* supported via the blocking API.
 
-### Supported signature algorithms:
+### Supported signature algorithms
 
-Algorithm registry: https://tools.ietf.org/id/draft-ietf-httpbis-message-signatures-09.html#name-initial-contents
+The following algorithms are listed in the [Algorithm registry](https://tools.ietf.org/id/draft-ietf-httpbis-message-signatures-09.html#name-http-signature-algorithms-4):
 
-- `hmac-sha256`
-- `rsa-pss-sha512`
-- `rsa-v1_5-sha256`
-- `ecdsa-p256-sha256`
+* `hmac-sha256`
+* `rsa-pss-sha512`
+* `rsa-v1_5-sha256`
+* `ecdsa-p256-sha256`
 
-### Supported digest algorithms:
+### Supported digest algorithms
+The following digest algorithmes are supported:
 
-Digest registry: https://www.iana.org/assignments/http-dig-alg/http-dig-alg.xhtml
-
-- `SHA-256`
-- `SHA-512`
+* `SHA-256`
+* `SHA-512`
 
 ## Interoperability
 

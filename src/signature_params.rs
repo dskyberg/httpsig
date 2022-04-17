@@ -9,7 +9,7 @@
 ///
 use std::default::Default;
 
-use crate::sfv::{BareItem, Parameters};
+use sfv::{BareItem, Parameters};
 
 /// `created` parameter name
 pub(crate) const CREATED: &str = "created";
@@ -24,7 +24,7 @@ pub(crate) const KEYID: &str = "keyid";
 
 /// Wrapper for [sfv::Parameters]
 #[derive(Clone, Debug, Default)]
-pub(crate) struct SignatureParams {
+pub struct SignatureParams {
     params: Parameters,
 }
 
@@ -37,13 +37,6 @@ impl From<&Parameters> for SignatureParams {
 }
 
 impl SignatureParams {
-    /*
-    /// Create an instance
-    pub fn new() -> Self {
-        Self::default()
-    }
-    */
-
     /// Get the params
     pub fn params(&self) -> Parameters {
         self.params.clone()
@@ -55,14 +48,6 @@ impl SignatureParams {
             .insert(String::from(CREATED), BareItem::Integer(created));
         self
     }
-
-    /*
-    /// Chainable, set the `created`
-    pub fn with_created(mut self, created: i64) -> Self {
-        self.set_created(created);
-        self
-    }
-    */
 
     /// Get the `created` param
     pub fn get_created(&self) -> Option<i64> {
@@ -76,14 +61,6 @@ impl SignatureParams {
         self
     }
 
-    /*
-    /// Chainable set the `expires` param
-    pub fn with_expires(mut self, expires: i64) -> Self {
-        self.set_expires(expires);
-        self
-    }
-    */
-
     /// Get the `expires` param
     pub fn get_expires(&self) -> Option<i64> {
         self.params.get(EXPIRES).and_then(|x| x.as_int())
@@ -96,20 +73,11 @@ impl SignatureParams {
         self
     }
 
-    /*
-    /// Chainable set the `nonce` param
-    pub fn with_nonce(mut self, nonce: &str) -> Self {
-        self.set_nonce(nonce);
-        self
-    }
-    */
-
-    /*
-    /// Get the `nonce` param
+    /// Get the 'nonce' param
+    #[allow(dead_code)]
     pub fn get_nonce(&self) -> Option<&str> {
-        self.params.get(NONCE).and_then(|x| x.as_str())
+        self.params.get(NONCE).and_then(|x| x.as_token())
     }
-    */
 
     /// Set the `alg` param in place
     pub fn set_alg(&mut self, alg: &str) -> &mut Self {
@@ -117,14 +85,6 @@ impl SignatureParams {
             .insert(String::from(ALG), BareItem::String(alg.to_string()));
         self
     }
-
-    /*
-    /// Chainable set the `alg` param
-    pub fn with_alg(mut self, alg: &str) -> Self {
-        self.set_alg(alg);
-        self
-    }
-    */
 
     /// Get the `alg` param
     pub fn get_alg(&self) -> Option<&str> {
@@ -138,37 +98,10 @@ impl SignatureParams {
         self
     }
 
-    /*
-    /// Chainable set the `keyid` param
-    pub fn with_keyid(mut self, keyid: &str) -> Self {
-        self.set_keyid(keyid);
-        self
-    }
-    */
-
     /// Get the `keyid` param
     pub fn get_keyid(&self) -> Option<&str> {
         self.params.get(KEYID).and_then(|x| x.as_str())
     }
-
-    /*
-    /// Set a parameter other than one of the named params
-    pub fn set_item(&mut self, key: &str, item: BareItem) -> &mut Self {
-        self.params.insert(String::from(key), item);
-        self
-    }
-
-    /// Chainable, set a parameter other than one of the named params
-    pub fn with_item(mut self, key: &str, item: BareItem) -> Self {
-        self.set_item(key, item);
-        self
-    }
-
-    /// Get a parameter as an [sfv::BareItem]
-    pub fn get_item(&self, key: &str) -> Option<&BareItem> {
-        self.params.get(key)
-    }
-    */
 }
 
 #[cfg(test)]
@@ -177,7 +110,12 @@ mod tests {
 
     #[test]
     fn test() {
-        let params = SignatureParams::new().with_nonce("nonce");
-        dbg!(params);
+        let params = Parameters::new();
+        let mut signature_params = SignatureParams::from(&params);
+        signature_params.set_nonce("nonce");
+        signature_params.set_alg("alg");
+        dbg!(&signature_params);
+        assert_eq!(signature_params.get_nonce(), Some("nonce"));
+        assert_eq!(signature_params.get_alg(), Some("alg"));
     }
 }

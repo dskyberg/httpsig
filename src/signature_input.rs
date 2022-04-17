@@ -2,12 +2,12 @@ use std::fmt;
 use std::iter::Iterator;
 
 use anyhow::Result;
-use sfv::{BareItem, InnerList, Item, List, ListEntry, Parser, SerializeValue};
+use sfv::{BareItem, Dictionary, InnerList, Item, List, ListEntry, Parser, SerializeValue};
 
 use crate::{Error, SignatureComponent, SignatureParams};
 
 /// Wrapper for [sfv::InnerList]
-pub(crate) struct ComponentList {
+pub struct ComponentList {
     /// Instance of [sfv::InnerList]
     pub inner: InnerList,
 }
@@ -25,7 +25,7 @@ impl ComponentList {
     }
 
     /// Convert the inner to an [sfv::List]
-    pub(crate) fn as_list(&self) -> List {
+    pub fn as_list(&self) -> List {
         vec![ListEntry::InnerList(self.inner.clone())] as List
     }
 
@@ -78,7 +78,7 @@ impl TryFrom<&List> for ComponentList {
 
 /// Opaque struct storing a canonicalizeed signature base, and the
 /// along with the signature components and metadata as a structured field.
-pub(crate) struct SignatureInput {
+pub struct SignatureInput {
     /// Signature Input label, such as `sig`
     pub label: String,
     /// Wrapper for [sfv::InnerList]
@@ -112,7 +112,7 @@ impl SignatureInput {
 
 impl fmt::Display for SignatureInput {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut dict = sfv::Dictionary::new();
+        let mut dict = Dictionary::new();
 
         dict.insert(
             self.label.to_owned(),

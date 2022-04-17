@@ -3,6 +3,7 @@ use std::fmt;
 use std::str::FromStr;
 
 use http::header::HeaderName;
+use sfv::{BareItem, Item};
 
 use crate::{DerivedComponent, Error};
 
@@ -23,10 +24,10 @@ pub enum SignatureComponent {
 impl SignatureComponent {
     /// Returns the string representation of the header, as it will appear
     /// in the HTTP signature.
-    pub fn to_item(&self) -> sfv::Item {
+    pub fn to_item(&self) -> Item {
         match self {
             Self::Derived(dc) => dc.item(),
-            Self::Header(h) => sfv::Item::new(sfv::BareItem::String(h.as_str().to_owned())),
+            Self::Header(h) => Item::new(BareItem::String(h.as_str().to_owned())),
         }
     }
 
@@ -87,8 +88,8 @@ impl From<DerivedComponent> for SignatureComponent {
     }
 }
 
-impl From<sfv::Item> for SignatureComponent {
-    fn from(item: sfv::Item) -> Self {
+impl From<Item> for SignatureComponent {
+    fn from(item: Item) -> Self {
         let name = item.bare_item.as_str().unwrap();
         if name.starts_with('@') {
             Self::Derived(item.into())
@@ -98,13 +99,11 @@ impl From<sfv::Item> for SignatureComponent {
     }
 }
 #[allow(clippy::from_over_into)]
-impl Into<sfv::Item> for SignatureComponent {
-    fn into(self) -> sfv::Item {
+impl Into<Item> for SignatureComponent {
+    fn into(self) -> Item {
         match self {
             SignatureComponent::Derived(derived) => derived.item(),
-            SignatureComponent::Header(name) => {
-                sfv::Item::new(sfv::BareItem::String(name.to_string()))
-            }
+            SignatureComponent::Header(name) => Item::new(BareItem::String(name.to_string())),
         }
     }
 }
