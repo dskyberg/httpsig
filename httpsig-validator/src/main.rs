@@ -14,7 +14,7 @@
 //! This will produce the following output:
 //!
 //! ```bash, no_run
-//! "date": Sun, 05 Jan 2014 21:31:40 GMT
+//! "date":  Tue, 20 Apr 2021 02:07:55 GMT
 //! "@signature-params": ("date");alg="rsa-v1_5-sha256"
 //! ```
 //!
@@ -23,7 +23,7 @@
 //! run something akin to the following:
 //!
 //! ```bash
-//! > cat ../test_data/basic_request.txt| cargo run -q -- sign -l sig -d "host date digest" -t RSA -a 'rsa-v1_5-sha256' -k "test-key-rsa" -p ../test_data/rsa-private.pem
+//! > cat ../test_data/basic_request.txt| cargo run -q -- sign -l sig -d "host date digest" -a 'rsa-v1_5-sha256' -k "test-key-rsa" -p ../test_data/rsa-private.pem
 //! ```
 //!
 //! The above will produce the following output:
@@ -44,17 +44,17 @@
 //! ## Testing Verification
 //!
 //! ```bash
-//! > cat ../test_data/signed_request.txt| cargo run -q -- verify -t RSA -k "test-key-rsa" -u ../test_data/rsa-2048-public-key.pk8
+//! > cat ../test_data/signed_request.txt| cargo run -q -- verify -a rsa-v1_5-sha256 -k "test-key-rsa" -u ../test_data/rsa-public.pem
 //! ```
 //!
 //! If successful, there will be no output.  If verification fails, you can turn
 //! on logging to see what might be failing:
 //!
 //! ```bash
-//! cat ../test_data/signed_request.txt| RUST_LOG=httpsig=trace cargo run -q -- verify -t RSA -k "test-key-rsa" -u .../test_data/rsa-2048-public-key.pk8
+//! cat ../test_data/signed_request.txt | RUST_LOG=httpsig=trace,httpsig_validator=trace cargo run -q -- verify -a rsa-v1_5-sha256 -k "test-key-rsa" -u ../test_data/rsa-public.pem
 //! ```
 
-// openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -pkeyopt rsa_keygen_pubexp:65537 | openssl pkcs8 -topk8 -nocrypt -outform der -out rsa-2048-private-key.pk8
+// openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -pkeyopt rsa_keygen_pubexp:65537 | openssl pkcs8 -topk8 -nocrypt -outform der -out rsa-private.pem
 use std::error::Error;
 use std::fs;
 use std::io::{self, Write};
@@ -279,9 +279,12 @@ impl Opt {
 
     fn verification_config(&self) -> Result<VerifyingConfig, Box<dyn Error>> {
         let key_id = self.key_id.clone().unwrap_or_default();
+        log::trace!("Using key_id: {}", &key_id);
         let key_data = if let Some(key) = self.public_key.as_ref() {
+            log::trace!("Reading public key from file");
             Some(fs::read(key)?)
         } else {
+            log::trace!("No publick key was read.  This is bad.");
             None
         };
 
@@ -301,24 +304,32 @@ impl Opt {
                     other
                 ))))
             }
+        };
+        if self.algorithm.is_none() {
+            log::trace!("No recognized algorithm was provided");
         }
 
         match (self.algorithm.as_deref(), key_data) {
-            (Some("rsa-v1_5-sha256"), Some(pkey)) => key_provider.add(
-                &key_id,
-                Arc::new(RsaSha256Verify::new_pem(&pkey).expect("Failed to load public key")),
-            ),
+            (Some("rsa-v1_5-sha256"), Some(pkey)) => {
+                log::trace!("Loading rsa-v1_5-sha256");
+                key_provider.add(&key_id, Arc::new(RsaSha256Verify::new_pem(&pkey)?))
+            }
             (Some("rsa-v1_5-sha512"), Some(pkey)) => {
+                log::trace!("Loading rsa-v1_5-sha512");
                 key_provider.add(&key_id, Arc::new(RsaSha512Verify::new_pem(&pkey)?))
             }
+
             (Some("rsa-pss-sha256"), Some(pkey)) => {
+                log::trace!("Loading rsa-pss-sha256");
                 key_provider.add(&key_id, Arc::new(RsaPssSha256Verify::new_pem(&pkey)?))
             }
             (Some("rsa-pss-sha512"), Some(pkey)) => {
+                log::trace!("Loading rsa-pss-sha512");
                 key_provider.add(&key_id, Arc::new(RsaPssSha512Verify::new_pem(&pkey)?))
             }
             (Some(_), None) => {
-                return Err(Box::new(AppError::BadArg("No key provided".to_string())))
+                log::trace!("No key provided");
+                return Err(Box::new(AppError::BadArg("No key provided".to_string())));
             }
             (Some(other), Some(_)) => {
                 return Err(Box::new(AppError::BadArg(format!(
@@ -326,8 +337,10 @@ impl Opt {
                     other
                 ))))
             }
-            (None, _) => {}
-        }
+            (None, _) => {
+                log::trace!("No key was loaded");
+            }
+        };
 
         let mut config = VerifyingConfig::new(key_provider);
 
