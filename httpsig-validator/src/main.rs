@@ -61,7 +61,7 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context};
+use error::AppError;
 //use http_sig::mock_request::MockRequest;
 use httpsig::{
     CanonicalizeConfig, CanonicalizeExt, RsaPssSha256Sign, RsaPssSha256Verify, RsaPssSha512Sign,
@@ -137,10 +137,7 @@ impl Opt {
             Some(if let Some(headers) = headers {
                 let headers: Vec<SignatureComponent> = headers
                     .split_ascii_whitespace()
-                    .map(|s| {
-                        s.parse::<SignatureComponent>()
-                            .with_context(|| format!("{:?}", s))
-                    })
+                    .map(|s| s.parse::<SignatureComponent>())
                     .collect::<Result<_, _>>()?;
                 headers
             } else {
@@ -179,8 +176,17 @@ impl Opt {
             | Some("rsa-pss-sha512")
             | Some("ecdsa-p256-sha256")
             | Some("hmac-sha256") => config.set_alg(self.algorithm.as_deref().unwrap()),
-            Some(other) => return Err(anyhow!("Unknown algorithm: {}", other).into()),
-            None => return Err(anyhow!("No algorithm provided").into()),
+            Some(other) => {
+                return Err(Box::new(AppError::BadArg(format!(
+                    "Unknown algorithm: {}",
+                    other
+                ))))
+            } // Err(Box::new(AppError::BadArg("Unknown algorithm: {}", other).into()),
+            None => {
+                return Err(Box::new(AppError::BadArg(
+                    "No algorithm provided".to_string(),
+                )))
+            }
         }
 
         match self.parse_headers()? {
@@ -213,7 +219,12 @@ impl Opt {
             | Some("hmac-sha256")
             | Some("ecdsa-p256-sha256")
             | None => {}
-            Some(other) => return Err(anyhow!("Unknown algorithm: {}", other).into()),
+            Some(other) => {
+                return Err(Box::new(AppError::BadArg(format!(
+                    "Unknown algorithm: {}",
+                    other
+                ))))
+            }
         }
 
         let mut config = match (self.algorithm.as_deref(), key_data) {
@@ -229,11 +240,20 @@ impl Opt {
             (Some("rsa-pss-sha512"), Some(pkey)) => {
                 SigningConfig::new(&label, &key_id, RsaPssSha512Sign::new_pkcs8_pem(&pkey)?)
             }
-            (Some(_), None) => return Err(anyhow!("No key provided").into()),
-            (Some(other), Some(_)) => {
-                return Err(anyhow!("Unsupported algorithm: {}", other).into())
+            (Some(_), None) => {
+                return Err(Box::new(AppError::BadArg("No key provided".to_string())))
             }
-            (None, _) => return Err(anyhow!("No algorithm provided").into()),
+            (Some(other), Some(_)) => {
+                return Err(Box::new(AppError::BadArg(format!(
+                    "Unsupported algorithm: {}",
+                    other
+                ))))
+            }
+            (None, _) => {
+                return Err(Box::new(AppError::BadArg(
+                    "No algorithm provided".to_string(),
+                )))
+            }
         };
 
         if let Some(components) = self.parse_headers()? {
@@ -275,7 +295,12 @@ impl Opt {
             | Some("hmac-sha256")
             | Some("ecdsa-p256-sha256")
             | None => {}
-            Some(other) => return Err(anyhow!("Unknown algorithm: {}", other).into()),
+            Some(other) => {
+                return Err(Box::new(AppError::BadArg(format!(
+                    "Unknown algorithm: {}",
+                    other
+                ))))
+            }
         }
 
         match (self.algorithm.as_deref(), key_data) {
@@ -292,8 +317,15 @@ impl Opt {
             (Some("rsa-pss-sha512"), Some(pkey)) => {
                 key_provider.add(&key_id, Arc::new(RsaPssSha512Verify::new_pem(&pkey)?))
             }
-            (Some(_), None) => return Err(anyhow!("No key provided").into()),
-            (Some(other), Some(_)) => return Err(anyhow!("Unknown key type: {}", other).into()),
+            (Some(_), None) => {
+                return Err(Box::new(AppError::BadArg("No key provided".to_string())))
+            }
+            (Some(other), Some(_)) => {
+                return Err(Box::new(AppError::BadArg(format!(
+                    "Unknown key type: {}",
+                    other
+                ))))
+            }
             (None, _) => {}
         }
 

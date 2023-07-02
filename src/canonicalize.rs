@@ -9,11 +9,11 @@
 //! Any object that derives the RequestLike trait must also provide values
 //! for Derived Components.  Derived Component are not headers, but are often
 //! derived from request header and URI values.
-use anyhow::Result;
+
 use itertools::{Either, Itertools};
 use std::iter::Iterator;
 
-use crate::{DerivedComponent, Error, SignatureComponent, SignatureInput, SignatureParams};
+use crate::{DerivedComponent, Error, Result, SignatureComponent, SignatureInput, SignatureParams};
 
 /// Base trait for all request types
 pub trait RequestLike {
@@ -37,7 +37,7 @@ impl<T: RequestLike> RequestLike for &T {
     }
 }
 
-/// Configuration for computing the canonical [Signature Base](https://www.ietf.org/archive/id/draft-ietf-httpbis-message-signatures-09.html#name-creating-the-signature-base) of a request.
+/// Configuration for computing the canonical [Signature Base](https://www.ietf.org/archive/id/draft-ietf-httpbis-message-signatures-17.html#name-creating-the-signature-base) of a request.
 ///
 /// The signature string is composed of the set of the components configured on the
 /// [crate::SigningConfig] along with the set of signing context components. This set
@@ -206,7 +206,7 @@ impl<T: RequestLike> CanonicalizeExt for T {
         // All available components have been derived.  If any requested components
         // were not available, then we cannot proceed.
         if !missing_components.is_empty() {
-            return Err(Error::MissingComponents(missing_components).into());
+            return Err(Error::MissingComponents(missing_components));
         }
 
         // Add the @signature-param DerivedComponent, built on the components

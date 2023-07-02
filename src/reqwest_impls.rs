@@ -248,8 +248,8 @@ mod tests {
             .header(CONTENT_TYPE, "application/json")
             .header(
                 DATE,
-                Utc.ymd(2021, 4, 20)
-                    .and_hms(2, 7, 55)
+                Utc.with_ymd_and_hms(2021, 4, 20, 2, 7, 55)
+                    .unwrap()
                     .format("%a, %d %b %Y %T GMT")
                     .to_string(),
             )

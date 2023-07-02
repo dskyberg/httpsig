@@ -1,7 +1,17 @@
-use std::fmt::Debug;
-
+use base64::{engine::general_purpose, Engine as _};
 use hmac::{Hmac, Mac};
 use sha2::{Digest, Sha256, Sha512};
+use std::fmt::Debug;
+
+#[cfg(feature = "openssl")]
+mod openssl;
+#[cfg(feature = "openssl")]
+pub use self::openssl::*;
+
+#[cfg(all(not(feature = "openssl"), feature = "ring"))]
+mod ring;
+#[cfg(all(not(feature = "openssl"), feature = "ring"))]
+pub use self::ring::*;
 
 /// Implements the signing half of an HTTP signature algorithm. For symmetric
 /// algorithms the same type implements both signing and verification.
@@ -50,16 +60,16 @@ macro_rules! hmac_signature {
             /// Create a new instance of the signature scheme using the
             /// provided key.
             pub fn new(key: &[u8]) -> Self {
-                Self(Hmac::new_varkey(key).expect("Hmac construction should be infallible"))
+                Self(Hmac::new_from_slice(key).expect("Hmac construction should be infallible"))
             }
         }
 
         impl HttpSignatureSign for $typename {
             fn http_sign(&self, bytes_to_sign: &[u8]) -> String {
                 let mut hmac = self.0.clone();
-                hmac.input(bytes_to_sign);
-                let tag = hmac.result().code();
-                base64::encode(tag.as_ref())
+                hmac.update(bytes_to_sign);
+                let tag = hmac.finalize().into_bytes();
+                general_purpose::STANDARD.encode(&tag)
             }
             fn name(&self) -> &str {
                 $name
@@ -67,13 +77,13 @@ macro_rules! hmac_signature {
         }
         impl HttpSignatureVerify for $typename {
             fn http_verify(&self, bytes_to_verify: &[u8], signature: &str) -> bool {
-                let tag = match base64::decode(signature) {
+                let tag = match general_purpose::STANDARD.decode(signature) {
                     Ok(tag) => tag,
                     Err(_) => return false,
                 };
                 let mut hmac = self.0.clone();
-                hmac.input(bytes_to_verify);
-                hmac.verify(&tag).is_ok()
+                hmac.update(bytes_to_verify);
+                hmac.verify_slice(&tag).is_ok()
             }
             fn name(&self) -> &str {
                 $name
@@ -90,7 +100,7 @@ impl HttpDigest for Sha256 {
         "SHA-256"
     }
     fn http_digest(&self, bytes_to_digest: &[u8]) -> String {
-        base64::encode(&Self::digest(bytes_to_digest))
+        general_purpose::STANDARD.encode(Self::digest(bytes_to_digest))
     }
 }
 
@@ -99,16 +109,6 @@ impl HttpDigest for Sha512 {
         "SHA-512"
     }
     fn http_digest(&self, bytes_to_digest: &[u8]) -> String {
-        base64::encode(&Self::digest(bytes_to_digest))
+        general_purpose::STANDARD.encode(Self::digest(bytes_to_digest))
     }
 }
-
-#[cfg(feature = "openssl")]
-mod openssl;
-#[cfg(feature = "openssl")]
-pub use self::openssl::*;
-
-#[cfg(all(not(feature = "openssl"), feature = "ring"))]
-mod ring;
-#[cfg(all(not(feature = "openssl"), feature = "ring"))]
-pub use self::ring::*;

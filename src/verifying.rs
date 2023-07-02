@@ -12,7 +12,8 @@ use subtle::ConstantTimeEq;
 
 use crate::{
     signature_header, signature_input_header, CanonicalizeConfig, CanonicalizeExt,
-    DefaultDigestAlgorithm, HttpDigest, HttpSignatureVerify, RequestLike, SignatureComponent,
+    DefaultDigestAlgorithm, HttpDigest, HttpSignatureVerify, RequestLike, Result,
+    SignatureComponent,
 };
 
 /// This error indicates that we failed to verify the request. As a result
@@ -82,10 +83,12 @@ impl SimpleKeyProvider {
     pub fn add(&mut self, key_id: &str, key: Arc<dyn HttpSignatureVerify>) {
         self.keys.entry(key_id.into()).or_default().push(key);
     }
+
     /// Clears all keys from the key store
     pub fn clear(&mut self) {
         self.keys.clear();
     }
+
     /// Removes all keys with the specified Key ID from the key store
     pub fn remove_all(&mut self, key_id: &str) {
         self.keys.remove(key_id);
@@ -520,7 +523,10 @@ fn verify_except_digest<T: ServerRequestLike>(
 
         // Then parse into a datetime
         let provided_date = DateTime::<Utc>::from_utc(
-            NaiveDateTime::from_timestamp(date_value, 0), //  ::parse_from_str(date_value, DATE_FORMAT)
+            NaiveDateTime::from_timestamp_opt(date_value, 0).or_else(|| {
+                info!("Verification Failed: Invalid date");
+                None
+            })?, //  ::parse_from_str(date_value, DATE_FORMAT)
             Utc,
         );
 

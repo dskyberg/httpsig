@@ -1,10 +1,9 @@
 use std::fmt;
 use std::iter::Iterator;
 
-use anyhow::Result;
 use sfv::{BareItem, Dictionary, InnerList, Item, List, ListEntry, Parser, SerializeValue};
 
-use crate::{Error, SignatureComponent, SignatureParams};
+use crate::{Error, Result, SignatureComponent, SignatureParams};
 
 /// Wrapper for [sfv::InnerList]
 pub struct ComponentList {

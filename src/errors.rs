@@ -1,6 +1,9 @@
 use crate::SignatureComponent;
 use thiserror::Error;
 
+/// Shorthand for standard result
+pub type Result<T, E = Error> = core::result::Result<T, E>;
+
 /// The types of error which may occur whilst computing the canonical "signature string"
 /// for a request.
 #[derive(Debug, Error)]

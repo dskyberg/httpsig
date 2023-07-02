@@ -48,8 +48,8 @@ pub const AT_REQUEST_RESPONSE: &str = "@request-response";
 /// aspects of the HTTP message being signed. Such derived components can be
 /// included in the signature base by defining a component identifier and the
 /// derivation method for its component value.
-/// They are defubed in the draft specification at
-/// [Derived Components](https://www.ietf.org/archive/id/draft-ietf-httpbis-message-signatures-09.html#name-derived-components)
+/// They are defined in the draft specification at
+/// [Derived Components](https://www.ietf.org/archive/id/draft-ietf-httpbis-message-signatures-17.html#name-derived-components)
 #[derive(Debug, Clone)]
 pub struct DerivedComponent {
     item: Item,

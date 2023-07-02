@@ -1,5 +1,5 @@
 #![deny(missing_docs)]
-//! Implementation of the IETF draft [HTTP Message Signatures](https://tools.ietf.org/id/draft-ietf-httpbis-message-signatures-09.html)
+//! Implementation of the IETF draft [HTTP Message Signatures](https://tools.ietf.org/id/draft-ietf-httpbis-message-signatures-17.html)
 //!
 //! ## Features
 //!
@@ -20,7 +20,7 @@
 //!
 //! ### Supported signature algorithms:
 //!
-//! The following algorithms are listed in the [Algorithm registry](https://tools.ietf.org/id/draft-ietf-httpbis-message-signatures-09.html#name-http-signature-algorithms-4):
+//! The following algorithms are listed in the [Algorithm registry](https://tools.ietf.org/id/draft-ietf-httpbis-message-signatures-17.html#name-http-signature-algorithms-4):
 //! * `hmac-sha256`
 //! * `rsa-pss-sha512`
 //! * `rsa-v1_5-sha256`
@@ -55,6 +55,7 @@
 //! let result = client.execute(req).unwrap();
 //! ```
 //! [SEMANTICS]:  https://tools.ietf.org/id/draft-ietf-httpbis-semantics-17.html
+//! [HTTPBIS]: https://www.ietf.org/archive/id/draft-ietf-httpbis-message-signatures-17.html
 
 use sha2::Sha256;
 

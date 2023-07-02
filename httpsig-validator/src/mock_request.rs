@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 use std::io::{BufRead, Write};
 
-use crate::error::Error;
-
-use anyhow::Context;
+use crate::error::AppError;
 
 use httpsig::{
     http::{header::HeaderName, HeaderValue, Method},
@@ -98,10 +96,10 @@ impl MockRequest {
         let mut parts = line.split_ascii_whitespace();
 
         // Extract method
-        let method: Method = parts.next().ok_or(Error::ParseError)?.parse()?;
+        let method: Method = parts.next().ok_or(AppError::ParseError)?.parse()?;
 
         // Extract method
-        let path: String = parts.next().ok_or(Error::ParseError)?.parse()?;
+        let path: String = parts.next().ok_or(AppError::ParseError)?.parse()?;
         let url: Url = path.parse().unwrap();
 
         // Extract headers
@@ -119,13 +117,9 @@ impl MockRequest {
             let mut parts = line.splitn(2, ':');
 
             let name_str = parts.next().ok_or(httpsig::Error::ParseError)?.trim();
-            let header_name: HeaderName = name_str
-                .parse()
-                .with_context(|| format!("{:?}", name_str))?;
+            let header_name: HeaderName = name_str.parse()?;
             let value_str = parts.next().ok_or(httpsig::Error::ParseError)?.trim();
-            let header_value: HeaderValue = value_str
-                .parse()
-                .with_context(|| format!("{:?}", value_str))?;
+            let header_value: HeaderValue = value_str.parse()?;
             headers.insert(header_name, header_value);
         };
 

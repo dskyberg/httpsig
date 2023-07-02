@@ -12,7 +12,7 @@ use crate::{DerivedComponent, Error};
 /// Names can refer to a standard HTTP header, or a [DerivedComponent]
 /// used for including additional information into a signature.
 /// A DerivedCompnent may be a [structured field](https://www.rfc-editor.org/rfc/rfc8941)
-/// with parameters, such as for [@query-params](https://www.ietf.org/archive/id/draft-ietf-httpbis-message-signatures-09.html#name-query-parameters)
+/// with parameters, such as for [@query-params](https://www.ietf.org/archive/id/draft-ietf-httpbis-message-signatures-17.html#name-query-parameters)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SignatureComponent {
     /// This header is one of the special "pseudo-headers"

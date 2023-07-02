@@ -1,5 +1,7 @@
 //use pem;
+use base64::{engine::general_purpose, Engine as _};
 use ring::{rand, signature};
+use spki::SubjectPublicKeyInfoRef;
 
 use crate::{HttpSignatureSign, HttpSignatureVerify};
 
@@ -68,7 +70,7 @@ macro_rules! rsa_signature {
                         &mut tag,
                     )
                     .expect("Signing should be infallible");
-                base64::encode(&tag)
+                general_purpose::STANDARD.encode(&tag)
             }
             fn name(&self) -> &str {
                 $name
@@ -76,7 +78,7 @@ macro_rules! rsa_signature {
         }
         impl HttpSignatureVerify for $verify_name {
             fn http_verify(&self, bytes_to_verify: &[u8], signature: &str) -> bool {
-                let tag = match base64::decode(signature) {
+                let tag = match general_purpose::STANDARD.decode(signature) {
                     Ok(tag) => tag,
                     Err(_) => return false,
                 };
@@ -105,11 +107,8 @@ macro_rules! rsa_signature {
 // that ever materializes, this should be re-engineered to leveage that code
 // directly.
 fn spki_to_unparsed_public_key(bytes: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    use spki::der::Document;
-    use spki::PublicKeyDocument;
-    let spki_doc = PublicKeyDocument::from_der(bytes)?;
-    let spki = spki_doc.decode();
-    Ok(spki.subject_public_key.to_vec())
+    let spki = SubjectPublicKeyInfoRef::try_from(bytes).unwrap();
+    Ok(spki.subject_public_key.raw_bytes().to_vec())
 }
 
 macro_rules! ecdsa_signature {
@@ -168,7 +167,7 @@ macro_rules! ecdsa_signature {
                     .0
                     .sign(&rand::SystemRandom::new(), bytes_to_sign)
                     .expect("Signing should be infallible");
-                base64::encode(&tag)
+                general_purpose::STANDARD.encode(&tag)
             }
             fn name(&self) -> &str {
                 $name
@@ -177,7 +176,7 @@ macro_rules! ecdsa_signature {
 
         impl HttpSignatureVerify for $verify_name {
             fn http_verify(&self, bytes_to_verify: &[u8], signature: &str) -> bool {
-                let tag = match base64::decode(signature) {
+                let tag = match general_purpose::STANDARD.decode(signature) {
                     Ok(tag) => tag,
                     Err(_) => return false,
                 };

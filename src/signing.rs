@@ -9,7 +9,7 @@ use std::time::SystemTime;
 use crate::{
     digest_header, signature_header, signature_input_header, CanonicalizeConfig, CanonicalizeExt,
     DefaultDigestAlgorithm, DefaultSignatureAlgorithm, Error, HttpDigest, HttpSignatureSign,
-    RequestLike, SignatureComponent, DATE_FORMAT,
+    RequestLike, Result, SignatureComponent, DATE_FORMAT,
 };
 
 /// This trait is to be implemented for types representing an outgoing
@@ -365,13 +365,13 @@ impl SigningConfig {
 /// `ClientRequestLike`.
 pub trait SigningExt: Sized {
     /// Consumes the request and returns it signed according to the provided configuration.
-    fn signed(mut self, config: &SigningConfig) -> Result<Self, Error> {
+    fn signed(mut self, config: &SigningConfig) -> Result<Self> {
         self.sign(config)?;
         Ok(self)
     }
 
     /// Signs the request in-place according to the provided configuration.
-    fn sign(&mut self, config: &SigningConfig) -> Result<(), Error>;
+    fn sign(&mut self, config: &SigningConfig) -> Result<()>;
 }
 
 fn add_auto_headers<R: ClientRequestLike>(
@@ -431,7 +431,7 @@ fn unix_timestamp() -> i64 {
 }
 
 impl<R: ClientRequestLike> SigningExt for R {
-    fn sign(&mut self, config: &SigningConfig) -> Result<(), Error> {
+    fn sign(&mut self, config: &SigningConfig) -> Result<()> {
         // Add missing components
         let components = add_auto_headers(self, config);
 
