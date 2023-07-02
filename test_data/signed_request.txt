@@ -1,0 +1,11 @@
+POST https://example.com/foo?param=value&pet=dog HTTP/1.1
+content-type: application/json
+content-length: 18
+digest: sha-256=X48E9qOokqqrvdts8nOJRJN3OWDUoyWxBf7kbu9DBPE=
+signature-input: sig=("host" "date" "digest");alg="rsa-v1_5-sha256";keyid="test-key-rsa"
+example-dict: a=(1 2), b=3, c=4;aa=bb, d=(5 6);valid
+date: Tue, 20 Apr 2021 02:07:55 GMT
+host: example.com
+signature: sig=:HWnpM0gf8Hg+dviM1IeAe0H1xkb/T9ZgjqOtvuhjvkMPSFECqXX3GcF/lwpWcyxbu2lYW6B6dJzCqsnLR663abQuH1GEYlyEDOYuWIVIRq6WdUx4Lsu0nsI7vnfZO9F3Ak+H4mk9bjeaaYeK3QK0pOUsyy97XjFphhr0d3GK2jhdTj0QnVPzVuerKUKno8rfsPQ9oMA5bKgFxhuyrWkvLVR3zDeIAuYkt1LNIwGSZnYIdOgm/F+Gy9VD+xHoLZgeisMlhajxDtcpdNgxnPualV0pd/LT6jTI9foUejM2w09rppLXsX8GLV9o9xhPm4zn4S+TXvvd3D9eI1NJnbWhVw==:
+
+{"hello": "world"}
