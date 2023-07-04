@@ -371,9 +371,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             .expect("Failed to read request from stdin")
     };
 
-    //let mut req = MockRequest::from_reader(&mut io::stdin().lock())?;
-
-    //log::info!("{:#?}", req);
+    log::trace!("{:#?}", req);
     match opt.mode {
         Mode::Canonicalize => {
             let (res, _signature_input) = req.canonicalize(&opt.canonicalize_config()?)?;

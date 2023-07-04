@@ -206,6 +206,10 @@ impl<T: RequestLike> CanonicalizeExt for T {
         // All available components have been derived.  If any requested components
         // were not available, then we cannot proceed.
         if !missing_components.is_empty() {
+            log::trace!(
+                "CanonicalizeConfig is missing required components: {:?}",
+                &missing_components
+            );
             return Err(Error::MissingComponents(missing_components));
         }
 
@@ -230,7 +234,8 @@ impl<T: RequestLike> CanonicalizeExt for T {
             .join("\n")
             .as_bytes()
             .to_vec();
-
+        log::trace!("Signature Base: {:?}", &signature_base);
+        log::trace!("SignatureInut: {:?}", &signature_input);
         Ok((signature_base, signature_input))
     }
 }

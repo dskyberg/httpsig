@@ -6,6 +6,7 @@ use sfv::{BareItem, Dictionary, InnerList, Item, List, ListEntry, Parser, Serial
 use crate::{Error, Result, SignatureComponent, SignatureParams};
 
 /// Wrapper for [sfv::InnerList]
+#[derive(Debug)]
 pub struct ComponentList {
     /// Instance of [sfv::InnerList]
     pub inner: InnerList,
@@ -77,6 +78,7 @@ impl TryFrom<&List> for ComponentList {
 
 /// Opaque struct storing a canonicalizeed signature base, and the
 /// along with the signature components and metadata as a structured field.
+#[derive(Debug)]
 pub struct SignatureInput {
     /// Signature Input label, such as `sig`
     pub label: String,

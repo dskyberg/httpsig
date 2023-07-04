@@ -1,4 +1,5 @@
 use crate::SignatureComponent;
+use http::header::InvalidHeaderValue;
 use thiserror::Error;
 
 /// Shorthand for standard result
@@ -54,4 +55,8 @@ pub enum Error {
     /// Failed to serialize
     #[error("Failed to serialize")]
     FailedToSerialize,
+
+    /// Failed to convert signature string to header value
+    #[error("Failed to create signature header value")]
+    ConvertHeader(#[from] InvalidHeaderValue),
 }

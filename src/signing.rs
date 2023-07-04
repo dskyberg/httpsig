@@ -1,6 +1,5 @@
 use chrono::Utc;
 use http::header::{HeaderName, HeaderValue, DATE, HOST};
-use log::trace;
 use sha2::Digest;
 use std::convert::TryInto;
 use std::sync::Arc;
@@ -448,6 +447,7 @@ impl<R: ClientRequestLike> SigningExt for R {
             }
             canonicalize_config.set_created(created);
         }
+
         if let Some(expires) = config.signature_expires.get(ts) {
             if expires < ts {
                 return Err(Error::InvalidSignatureExpiresDate);
@@ -465,10 +465,6 @@ impl<R: ClientRequestLike> SigningExt for R {
         let (signature_base, signature_input) = self
             .canonicalize(&canonicalize_config)
             .map_err(|_| Error::Canonicalize)?;
-        trace!(
-            "Signing SignatureString: {}",
-            &String::from_utf8(signature_base.clone()).unwrap()
-        );
 
         // Attach the `signature-input` header to the request
         let signature_input_value = HeaderValue::from_str(signature_input.to_string().as_str())
@@ -476,16 +472,14 @@ impl<R: ClientRequestLike> SigningExt for R {
 
         self.set_header(signature_input_header(), signature_input_value);
 
-        // Sign the content&
+        // Sign the contents
         let signature = config.signature.http_sign(&signature_base);
         let sig_header = format!("{}=:{}:", config.label, &signature);
 
         // Attach the signature header to the request
         self.set_header(
             signature_header(),
-            sig_header
-                .try_into()
-                .expect("Signature should generate a valie header"),
+            sig_header.try_into().map_err(Error::ConvertHeader)?,
         );
 
         Ok(())
