@@ -234,7 +234,11 @@ impl<T: RequestLike> CanonicalizeExt for T {
             .join("\n")
             .as_bytes()
             .to_vec();
-        log::trace!("Signature Base: {:?}", &signature_base);
+        log::trace!("Signature Base [u8]: {:?}", &signature_base);
+        log::trace!(
+            "Signature Base String: {}",
+            &String::from_utf8(signature_base.clone()).expect("failed to convert to string")
+        );
         log::trace!("SignatureInut: {:?}", &signature_input);
         Ok((signature_base, signature_input))
     }
