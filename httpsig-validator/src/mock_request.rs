@@ -3,6 +3,7 @@ use std::io::{BufRead, Write};
 
 use crate::error::AppError;
 
+use httpsig::url::ParseError;
 use httpsig::{
     http::{header::HeaderName, HeaderValue, Method},
     url::Url,
@@ -20,6 +21,7 @@ use httpsig::{
 pub struct MockRequest {
     method: Method,
     url: Url,
+    path: String,
     headers: HashMap<HeaderName, HeaderValue>,
     body: Option<Vec<u8>>,
 }
@@ -32,6 +34,10 @@ impl MockRequest {
     /// Returns the path used by this mock request
     pub fn url(&self) -> &Url {
         &self.url
+    }
+    /// Original path from request
+    pub fn path(&self) -> &String {
+        &self.path
     }
     /// Returns the headers used by this mock request
     pub fn headers(&self) -> impl IntoIterator<Item = (&HeaderName, &HeaderValue)> {
@@ -59,6 +65,7 @@ impl MockRequest {
         let mut res = Self {
             method,
             url: path.parse().unwrap(),
+            path: path.to_string(),
             headers: Default::default(),
             body: None,
         };
@@ -100,11 +107,11 @@ impl MockRequest {
 
         // Extract method
         let path: String = parts.next().ok_or(AppError::ParseError)?.parse()?;
-        let url: Url = path.parse().unwrap();
 
         // Extract headers
         #[allow(clippy::mutable_key_type)]
         let mut headers = HashMap::new();
+
         let has_body = loop {
             line.truncate(0);
             if reader.read_line(&mut line)? == 0 {
@@ -126,22 +133,67 @@ impl MockRequest {
         let body = if has_body {
             let mut body = Vec::new();
             reader.read_to_end(&mut body)?;
+            log::trace!(
+                "Messge Body: {}",
+                &String::from_utf8(body.clone()).expect("Failed to convert from [u8] to String")
+            );
             Some(body)
         } else {
             None
         };
 
+        // log::trace!("Headers: {:?}", &headers);
+
+        // See if the url is relative.  If so, let's try to fix it up.
+        let url = Self::derive_url(&path, None, &headers)?;
+
         Ok(Self {
             method,
             url,
+            path,
             headers,
             body,
         })
     }
 
+    /// Derive an absolute URL from request components
+    /// The [httpsig::url] create does not support relative URLs.
+    ///
+    /// If no HOST header is available, then this method wil fail.
+    #[allow(clippy::mutable_key_type)]
+    fn derive_url(
+        path: &str,
+        schema: Option<&str>,
+        headers: &HashMap<HeaderName, HeaderValue>,
+    ) -> Result<Url, Box<dyn std::error::Error>> {
+        // See if the url is relative.  If so, let's try to fix it up.
+        let url: Result<Url, Box<dyn std::error::Error>> = match path.parse() {
+            Ok(u) => Ok(u),
+            Err(ParseError::RelativeUrlWithoutBase) => {
+                // It's a relative URL.  So, we need to prepen the schema and authority
+                let schema = schema.unwrap_or("http");
+                match headers.get(&HeaderName::from_static("host")) {
+                    Some(host) => {
+                        log::trace!("Attempting to use host header");
+                        Ok(format!("{}://{}{}", schema, host.to_str()?, path)
+                            .parse()
+                            .expect("still failed!!"))
+                    }
+                    None => {
+                        log::info!("Cannot use relative URLs: {}", &path);
+                        Err(Box::new(ParseError::RelativeUrlWithoutBase))
+                    }
+                }
+            }
+            Err(e) => Err(Box::new(e)),
+        };
+
+        url
+    }
+
     /// Write out this HTTP request in standard format
     pub fn write<W: Write>(&self, writer: &mut W) -> Result<(), Box<dyn std::error::Error>> {
-        writeln!(writer, "{} {} HTTP/1.1", self.method.as_str(), self.url())?;
+        writeln!(writer, "{} {} HTTP/1.1", self.method.as_str(), self.path())?;
         for (header_name, header_value) in &self.headers {
             writeln!(
                 writer,
@@ -165,7 +217,7 @@ impl Derivable<DerivedComponent> for MockRequest {
     fn derive_component(&self, component: &DerivedComponent) -> Option<String> {
         match component.name() {
             // Given POST https://www.method.com/path?param=value
-            // target uri = POSST
+            // target uri = POST
             AT_METHOD => Some(self.method().as_str().to_owned()),
 
             // Given POST https://www.method.com/path?param=value
