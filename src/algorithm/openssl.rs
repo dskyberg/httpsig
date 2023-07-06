@@ -1,5 +1,6 @@
 use std::fmt;
 
+use base64::{engine::general_purpose, Engine as _};
 use openssl::hash::MessageDigest;
 use openssl::pkey::{PKey, Private, Public};
 use openssl::rsa::Padding;
@@ -34,20 +35,27 @@ macro_rules! rsa_signature {
 
         impl $sign_name {
             /// Create a new instance of the signature scheme using the
-            /// provided private key.
+            /// provided private key in PKCS8 DER format.
             pub fn new_pkcs8(private_key: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
                 Ok(Self(PKey::private_key_from_pkcs8(private_key)?))
             }
+
+            /// Create a new instance of the signature scheme using the
+            /// provided private key in PKCS8 DER format.
+            pub fn new_pkcs8_pem(private_key: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
+                Ok(Self(PKey::private_key_from_pkcs8(private_key)?))
+            }
+
             /// Create a new instance of the signature scheme using the
             /// provided private key.
-            pub fn new_der(private_key: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
+            pub fn new_pkcs1_der(private_key: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
                 Ok(Self(PKey::from_rsa(Rsa::private_key_from_der(
                     private_key,
                 )?)?))
             }
             /// Create a new instance of the signature scheme using the
             /// provided private key.
-            pub fn new_pem(private_key: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
+            pub fn new_pkcs1_pem(private_key: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
                 Ok(Self(PKey::from_rsa(Rsa::private_key_from_pem(
                     private_key,
                 )?)?))
@@ -74,16 +82,15 @@ macro_rules! rsa_signature {
                 let tag = signer
                     .sign_oneshot_to_vec(bytes_to_sign)
                     .expect("Signing to be infallible");
-                base64::encode(&tag)
+                general_purpose::STANDARD.encode(&tag)
             }
             fn name(&self) -> &str {
                 $name
             }
-
         }
         impl HttpSignatureVerify for $verify_name {
             fn http_verify(&self, bytes_to_verify: &[u8], signature: &str) -> bool {
-                let tag = match base64::decode(signature) {
+                let tag = match general_purpose::STANDARD.decode(signature) {
                     Ok(tag) => tag,
                     Err(_) => return false,
                 };
@@ -101,7 +108,6 @@ macro_rules! rsa_signature {
             fn name(&self) -> &str {
                 $name
             }
-
         }
     };
 }
