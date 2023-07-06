@@ -79,8 +79,6 @@ let req = client
 
 let result = client.execute(req).unwrap();
 ````
-
-
 ## License
 
 Licensed under either of
@@ -95,3 +93,4 @@ Open an issue or send a PR. All contributions intentionally submitted for inclus
 
 [SEMANTICS]:  https://tools.ietf.org/id/draft-ietf-httpbis-semantics-17.html
 [HTTPBIS]: https://www.ietf.org/archive/id/draft-ietf-httpbis-message-signatures-17.html
+[httpsig.org]: https://httpsig.org
