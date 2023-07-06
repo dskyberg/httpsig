@@ -89,6 +89,43 @@ impl DerivedComponent {
     pub fn item(&self) -> Item {
         self.item.to_owned()
     }
+
+    /// Consolidated
+    pub fn derive(
+        &self,
+        host: Option<String>,
+        method: &http::Method,
+        url: &url::Url,
+    ) -> Option<String> {
+        match self.name() {
+            AT_METHOD => Some(method.to_string()),
+            // Reqwest does not support relative urls.  So, entire
+            // url is the request target.
+            AT_REQUEST_TARGET => Some(url.to_string()),
+            AT_TARGET_URI => Some(url.to_string()),
+            // In a request, @authority is the HOST
+            AT_AUTHORITY => host,
+            AT_SCHEME => Some(url.scheme().to_string()),
+            AT_PATH => Some(url.path().to_string()),
+            AT_QUERY => url.query().map(|query| format!("?{}", query.to_owned())),
+            AT_QUERY_PARAMS => {
+                // A query-param component must have a parameter. The param key must be "name".
+                let dqp_field = self.param("name")?;
+
+                // Get the parameter field name.
+                let mut derived: Vec<String> = Vec::new();
+                let qp_pairs = url.query_pairs();
+                for (qp_name, qp_value) in qp_pairs {
+                    if dqp_field.eq(&qp_name) {
+                        // Construct a signature base entry for each instance of the
+                        derived.push(format!("{}", qp_value));
+                    }
+                }
+                Some(derived.join("\n"))
+            }
+            _ => None,
+        }
+    }
 }
 
 impl PartialEq for DerivedComponent {

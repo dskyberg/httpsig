@@ -1,46 +1,6 @@
-use http::{
-    header::{HeaderName, HeaderValue},
-    Method,
-};
+use http::header::{HeaderName, HeaderValue};
 
 use super::*;
-
-/// Consolidated
-fn handle_derived_component(
-    component: &DerivedComponent,
-    host: Option<String>,
-    method: &Method,
-    url: &url::Url,
-) -> Option<String> {
-    match component.name() {
-        AT_METHOD => Some(method.to_string()),
-        // Reqwest does not support relative urls.  So, entire
-        // url is the request target.
-        AT_REQUEST_TARGET => Some(url.to_string()),
-        AT_TARGET_URI => Some(url.to_string()),
-        // In a request, @authority is the HOST
-        AT_AUTHORITY => host,
-        AT_SCHEME => Some(url.scheme().to_string()),
-        AT_PATH => Some(url.path().to_string()),
-        AT_QUERY => url.query().map(|query| format!("?{}", query.to_owned())),
-        AT_QUERY_PARAMS => {
-            // A query-param component must have a parameter. The param key must be "name".
-            let dqp_field = component.param("name")?;
-
-            // Get the parameter field name.
-            let mut derived: Vec<String> = Vec::new();
-            let qp_pairs = url.query_pairs();
-            for (qp_name, qp_value) in qp_pairs {
-                if dqp_field.eq(&qp_name) {
-                    // Construct a signature base entry for each instance of the
-                    derived.push(format!("{}", qp_value));
-                }
-            }
-            Some(derived.join("\n"))
-        }
-        _ => None,
-    }
-}
 
 impl RequestLike for reqwest::Request {
     fn derive(&self, component: &SignatureComponent) -> Option<String> {
@@ -52,7 +12,7 @@ impl RequestLike for reqwest::Request {
                 .map(|x| x.to_string()),
 
             SignatureComponent::Derived(component) => {
-                handle_derived_component(component, self.host(), self.method(), self.url())
+                component.derive(self.host(), self.method(), self.url())
             }
         }
     }
@@ -84,7 +44,7 @@ impl RequestLike for reqwest::blocking::Request {
                 .map(|x| x.to_string()),
 
             SignatureComponent::Derived(component) => {
-                handle_derived_component(component, self.host(), self.method(), self.url())
+                component.derive(self.host(), self.method(), self.url())
             }
         }
     }
@@ -109,13 +69,13 @@ impl ClientRequestLike for reqwest::blocking::Request {
 
 impl Derivable<DerivedComponent> for reqwest::Request {
     fn derive_component(&self, component: &DerivedComponent) -> Option<String> {
-        handle_derived_component(component, self.host(), self.method(), self.url())
+        component.derive(self.host(), self.method(), self.url())
     }
 }
 
 impl Derivable<DerivedComponent> for reqwest::blocking::Request {
     fn derive_component(&self, component: &DerivedComponent) -> Option<String> {
-        handle_derived_component(component, self.host(), self.method(), self.url())
+        component.derive(self.host(), self.method(), self.url())
     }
 }
 
