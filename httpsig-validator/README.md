@@ -17,7 +17,7 @@ Basic syntax:
 
 This will produce the following output:
 
-```http, no_run
+```
 "host": example.com
 "date": Tue, 20 Apr 2021 02:07:55 GMT
 "content-digest": sha-256=:X48E9qOokqqrvdts8nOJRJN3OWDUoyWxBf7kbu9DBPE=:
