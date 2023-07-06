@@ -5,12 +5,24 @@ use crate::error::AppError;
 
 use httpsig::url::ParseError;
 use httpsig::{
-    http::{header::HeaderName, HeaderValue, Method},
+    http::{header::HeaderName, HeaderMap, HeaderValue, Method, Version},
     url::Url,
     ClientRequestLike, Derivable, DerivedComponent, HttpDigest, RequestLike, ServerRequestLike,
     SignatureComponent, AT_AUTHORITY, AT_METHOD, AT_PATH, AT_QUERY, AT_QUERY_PARAMS,
     AT_REQUEST_TARGET, AT_SCHEME, AT_TARGET_URI,
 };
+
+/// Convenience function since http::Version doesn't support From<String> or TryFrom<String>
+fn version_try_from_string(value: &str) -> Result<Version, AppError> {
+    match value {
+        "HTTP/0.9" => Ok(Version::HTTP_09),
+        "HTTP/1.0" => Ok(Version::HTTP_10),
+        "HTTP/1.1" => Ok(Version::HTTP_11),
+        "HTTP/2.0" => Ok(Version::HTTP_2),
+        "HTTP/3.0" => Ok(Version::HTTP_3),
+        _ => Err(AppError::ParseError),
+    }
+}
 
 /// A mock request type
 ///
@@ -19,17 +31,23 @@ use httpsig::{
 /// target request crate.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MockRequest {
+    version: Version,
     method: Method,
     url: Url,
     path: String,
-    headers: HashMap<HeaderName, HeaderValue>,
+    headers: HeaderMap,
     body: Option<Vec<u8>>,
 }
 
 impl MockRequest {
+    /// HTTP version of the request
+    pub fn version(&self) -> Version {
+        self.version.clone()
+    }
+
     /// Returns the method used by this mock request
-    pub fn method(&self) -> Method {
-        self.method.clone()
+    pub fn method(&self) -> &Method {
+        &self.method
     }
     /// Returns the path used by this mock request
     pub fn url(&self) -> &Url {
@@ -60,13 +78,14 @@ impl MockRequest {
     }
 
     /// Constructs a new mock request
-    pub fn new(method: Method, path: &str) -> Self {
+    pub fn new(version: Version, method: Method, path: &str, headers: HeaderMap) -> Self {
         let url: Url = path.parse().unwrap();
         let mut res = Self {
+            version,
             method,
             url: path.parse().unwrap(),
             path: path.to_string(),
-            headers: Default::default(),
+            headers,
             body: None,
         };
 
@@ -105,12 +124,16 @@ impl MockRequest {
         // Extract method
         let method: Method = parts.next().ok_or(AppError::ParseError)?.parse()?;
 
-        // Extract method
+        // Extract path
         let path: String = parts.next().ok_or(AppError::ParseError)?.parse()?;
+
+        // Extract the HTTP version
+        let v: String = parts.next().ok_or(AppError::ParseError)?.parse()?;
+        let version = version_try_from_string(&v)?;
 
         // Extract headers
         #[allow(clippy::mutable_key_type)]
-        let mut headers = HashMap::new();
+        let mut headers = HeaderMap::new();
 
         let has_body = loop {
             line.truncate(0);
@@ -148,6 +171,7 @@ impl MockRequest {
         let url = Self::derive_url(&path, None, &headers)?;
 
         Ok(Self {
+            version,
             method,
             url,
             path,
@@ -164,7 +188,7 @@ impl MockRequest {
     fn derive_url(
         path: &str,
         schema: Option<&str>,
-        headers: &HashMap<HeaderName, HeaderValue>,
+        headers: &HeaderMap,
     ) -> Result<Url, Box<dyn std::error::Error>> {
         // See if the url is relative.  If so, let's try to fix it up.
         let url: Result<Url, Box<dyn std::error::Error>> = match path.parse() {
@@ -215,52 +239,7 @@ impl MockRequest {
 impl Derivable<DerivedComponent> for MockRequest {
     /// Deriveable for MockRequest
     fn derive_component(&self, component: &DerivedComponent) -> Option<String> {
-        match component.name() {
-            // Given POST https://www.method.com/path?param=value
-            // target uri = POST
-            AT_METHOD => Some(self.method().as_str().to_owned()),
-
-            // Given POST https://www.method.com/path?param=value
-            // target uri = https://www.method.com/path?param=value
-            AT_TARGET_URI => Some(self.url().to_string()),
-
-            // Given POST https://www.method.com/path?param=value
-            // target uri = www.method.com
-            AT_AUTHORITY => self.url().host_str().map(|s| s.to_owned()),
-
-            // Given POST https://www.method.com/path?param=value
-            // target uri = https
-            AT_SCHEME => Some(self.url().scheme().to_owned()),
-
-            // given POST https://www.example.com/path?param=value
-            // request target = /path
-            AT_REQUEST_TARGET => Some(self.url().to_string()),
-
-            // given POST https://www.example.com/path?param=value
-            // request target = /path?param=value
-            AT_PATH => Some(self.url().path().to_owned()),
-
-            // given POST https://www.example.com/path?param=value&foo=bar&baz=batman
-            // request target = /path?param=value
-            AT_QUERY => self.url().query().map(|s| format!("?{}", s.to_owned())),
-
-            AT_QUERY_PARAMS => {
-                // A query-param component must have a parameter. The param key must be "name".
-                let dqp_field = component.param("name")?;
-
-                // Get the parameter field name
-                let mut derived: Vec<String> = Vec::new();
-                let qp_pairs = self.url.query_pairs();
-                for (qp_name, qp_value) in qp_pairs {
-                    if dqp_field.eq(&qp_name) {
-                        // Construct a signature base entry for each instance
-                        derived.push(format!("{}", qp_value));
-                    }
-                }
-                Some(derived.join("\n"))
-            }
-            _ => None,
-        }
+        component.derive(self.host(), self.method(), self.url())
     }
 }
 
@@ -314,14 +293,17 @@ mod tests {
 
     use std::sync::Arc;
 
+    #[cfg(feature = "ring")]
+    use httpsig::{EcdsaP256Sha256Sign, EcdsaP256Sha256Verify};
+
     use httpsig::{
-        EcdsaP256Sha256Sign, EcdsaP256Sha256Verify, HttpSignatureVerify, RsaSha256Sign,
-        RsaSha256Verify, SimpleKeyProvider, VerifyingConfig, VerifyingExt, AT_AUTHORITY, AT_METHOD,
-        AT_PATH, AT_QUERY, AT_QUERY_PARAMS, AT_REQUEST_TARGET, AT_SCHEME, AT_TARGET_URI,
+        HttpSignatureVerify, RsaSha256Sign, RsaSha256Verify, SimpleKeyProvider, VerifyingConfig,
+        VerifyingExt, AT_AUTHORITY, AT_METHOD, AT_PATH, AT_QUERY, AT_QUERY_PARAMS,
+        AT_REQUEST_TARGET, AT_SCHEME, AT_TARGET_URI,
     };
 
     fn request(url: &str) -> MockRequest {
-        MockRequest::new(Method::POST, url)
+        MockRequest::new(Version::HTTP_11, Method::POST, url, HeaderMap::default())
     }
 
     #[test]
@@ -433,10 +415,13 @@ mod tests {
             (
                 "test-key-rsa",
                 Arc::new(
-                    RsaSha256Verify::new_pem(include_bytes!("../../test_data/rsa-public.pem"))
-                        .unwrap(),
+                    RsaSha256Verify::new_pkcs1_pem(include_bytes!(
+                        "../../test_data/rsa-public.pem"
+                    ))
+                    .unwrap(),
                 ) as Arc<dyn HttpSignatureVerify>,
             ),
+            #[cfg(feature = "ring")]
             (
                 "test-key-ecdsa",
                 Arc::new(
@@ -456,7 +441,9 @@ mod tests {
         // Expect successful validation
         let test_req_filename = "../test_data/basic_request.txt";
         let key = include_bytes!("../../test_data/rsa-private.pem");
+
         let signature_alg = RsaSha256Sign::new_pkcs8_pem(key).expect("Failed to create key");
+
         let dqp = DerivedComponent::new(AT_QUERY_PARAMS).with_param("name", "param");
         // Declare the headers to be included in the signature.
         // NOTE: NO HEADERS ARE INCLUDED BY DEFAULT
@@ -492,6 +479,7 @@ mod tests {
     }
 
     /// https://tools.ietf.org/id/draft-cavage-http-signatures-12.html#default-test
+    #[cfg(feature = "ring")]
     #[test]
     fn ecdsa_test() {
         let test_req_filename = "../test_data/basic_request.txt";
@@ -540,6 +528,7 @@ mod tests {
         let test_val = r#"sig=();alg="rsa-v1_5-sha256";keyid="test-key-rsa""#;
 
         let key = include_bytes!("../../test_data/rsa-private.pem");
+
         let signature_alg = RsaSha256Sign::new_pkcs8_pem(key).expect("Failed to create key");
 
         // Turn off all automatic headers, like host, date, and digest
