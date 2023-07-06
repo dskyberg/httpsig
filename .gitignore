@@ -2,3 +2,4 @@
 /data
 **/*.rs.bk
 Cargo.lock
+/httpsig-validator/*.pem
