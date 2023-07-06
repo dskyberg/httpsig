@@ -6,7 +6,7 @@ edition = "2021"
 workspace = ".."
 
 [dependencies]
-httpsig = { path = "..", features = ["ring"] }
+httpsig = { path = "..", features = ["default"] }
 structopt = "0.3"
 env_logger = "0.10"
 log = "0.4"
